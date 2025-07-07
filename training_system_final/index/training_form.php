@@ -1,6 +1,9 @@
 <?php
 require_once '../config/config.php';
+
 $message = '';
+$unique_code = '';
+$email = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $name = trim($_POST['name']);
@@ -14,7 +17,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $type = trim($_POST['type']);
     $institution = trim($_POST['institution']);
 
-    // Insert the training entry
     $stmt = $pdo->prepare("INSERT INTO training_entries 
         (staff_name, staff_email, staff_type, title, role, start_date, end_date, hours, type, institution) 
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
@@ -26,7 +28,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $pdo->prepare("UPDATE training_entries SET unique_code = ? WHERE id = ?")
         ->execute([$unique_code, $entry_id]);
 
-    // Handle multiple files
     if (!empty($_FILES['docs']['name'][0])) {
         foreach ($_FILES['docs']['name'] as $index => $file_name) {
             if ($_FILES['docs']['error'][$index] === UPLOAD_ERR_OK) {
@@ -41,8 +42,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
-    $message = "✅ Submitted successfully!<br>Your <strong>Training Entry Code</strong> is: <strong>$unique_code</strong>.<br> Please save it for your 6-Month Impact Assessment.";
-    $message .= "<br><a href='view_submission.php' class='btn btn-custom mt-3'>View My Submission</a>";
+    // Build success message WITH email and code in the link
+    $message = "✅ Submitted successfully!<br>Your <strong>Training Entry Code</strong> is: <strong>$unique_code</strong>.<br>Please save it for your 6-Month Impact Assessment.<br>
+    <a href='view_submission.php?email=" . urlencode($email) . "&code=" . urlencode($unique_code) . "' class='btn btn-primary mt-3'>View My Submission</a>";
 }
 ?>
 
@@ -51,43 +53,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <head>
     <title>Training Input Form</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <style>
-        body {
-            background-color: #f8f9fa;
-            font-family: Arial, sans-serif;
-        }
-        .card {
-            background: #ffffff;
-            border-radius: 8px;
-            box-shadow: 0 0 20px rgba(0,0,0,0.1);
-            padding: 30px;
-        }
-        .header {
-            background-color: #003366;
-            color: #fff;
-            padding: 20px;
-            border-radius: 8px 8px 0 0;
-            text-align: center;
-            margin-bottom: 30px;
-        }
-        .btn-custom {
-            background: #003366;
-            color: #fff;
-            border: none;
-        }
-        .btn-custom:hover {
-            background: #0055aa;
-        }
+        body { background-color: #f8f9fa; font-family: Arial, sans-serif; }
+        .card { background: #ffffff; border-radius: 8px; box-shadow: 0 0 20px rgba(0,0,0,0.1); padding: 30px; }
+        .header { background-color: #003366; color: #fff; padding: 20px; border-radius: 8px 8px 0 0; text-align: center; margin-bottom: 30px; }
+        .btn-custom { background: #003366; color: #fff; border: none; }
+        .btn-custom:hover { background: #0055aa; }
     </style>
 </head>
 <body class="bg-light">
-<div class="container my-5">
+
+<div class="container my-3">
+    <a href="../index.php" class="btn btn-outline-secondary">⬅️ Back to Home</a>
+</div>
+
+<div class="container my-3">
     <div class="card mx-auto" style="max-width: 700px;">
         <div class="header">
             <h3>Staff Training Details Form</h3>
         </div>
-        <?php if ($message) echo "<div class='alert alert-success'>$message</div>"; ?>
         <form method="POST" enctype="multipart/form-data">
+            <!-- form fields -->
             <div class="mb-3">
                 <label class="form-label">Name</label>
                 <input type="text" name="name" class="form-control" required>
@@ -124,20 +111,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <input type="number" name="hours" class="form-control" required>
             </div>
             <div class="mb-3">
-                <label class="form-label">Training Type (Managerial/Supervisory/Technical/Foundation, etc.)</label>
+                <label class="form-label">Type of Learning and Development (Managerial/Supervisory/Technical/Foundation)</label>
                 <input type="text" name="type" class="form-control">
             </div>
             <div class="mb-3">
-                <label class="form-label">Conducted/Sponsored by (Institution/Organizer)</label>
+                <label class="form-label">Conducted/Sponsored by</label>
                 <input type="text" name="institution" class="form-control" required>
             </div>
             <div class="mb-3">
-                <label class="form-label">Upload Documents (You may select multiple)</label>
+                <label class="form-label">Upload Documents</label>
                 <input type="file" name="docs[]" class="form-control" accept=".pdf,.doc,.docx" multiple>
             </div>
             <button type="submit" class="btn btn-custom w-100">Submit</button>
         </form>
     </div>
 </div>
+
+<!-- Modal for success -->
+<?php if ($message): ?>
+<div class="modal fade show" id="successModal" tabindex="-1" aria-modal="true" style="display:block;">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header bg-success text-white">
+        <h5 class="modal-title">Success</h5>
+      </div>
+      <div class="modal-body"><?= $message ?></div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="window.location.href='../index.php'">Back to Home</button>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="modal-backdrop fade show"></div>
+<?php endif; ?>
+
 </body>
 </html>

@@ -3,13 +3,26 @@ require_once '../config/config.php';
 
 if (!isset($_SESSION['hr_id'])) die("Access denied.");
 
-// Get all entries with supporting docs
-$stmt = $pdo->query("
+// Determine filter if set
+$filter = '';
+$where = '';
+$params = [];
+
+if (isset($_GET['filter']) && in_array($_GET['filter'], ['COS', 'Permanent'])) {
+    $filter = $_GET['filter'];
+    $where = "WHERE te.staff_type = ?";
+    $params[] = $filter;
+}
+
+// Prepare query with filter if needed
+$stmt = $pdo->prepare("
     SELECT te.*, sd.file_name, sd.file_path
     FROM training_entries te
     LEFT JOIN supporting_docs sd ON te.id = sd.training_entry_id
+    $where
     ORDER BY te.id DESC
 ");
+$stmt->execute($params);
 $entries = $stmt->fetchAll(PDO::FETCH_ASSOC);
 ?>
 
@@ -53,6 +66,14 @@ $entries = $stmt->fetchAll(PDO::FETCH_ASSOC);
         .btn-download:hover {
             background: #0077cc;
         }
+        .btn-filter {
+            background: #0055aa;
+            color: #fff;
+            border: none;
+        }
+        .btn-filter:hover {
+            background: #0077cc;
+        }
     </style>
 </head>
 <body class="bg-light">
@@ -62,9 +83,16 @@ $entries = $stmt->fetchAll(PDO::FETCH_ASSOC);
             <h2>Training Impact Assessment</h2>
         </div>
 
-        <div class="mb-4 d-flex justify-content-end gap-2">
-            <a href="export.php" class="btn btn-download">Download CSV</a>
-            <a href="hr_logout.php" class="btn btn-custom">Logout</a>
+        <div class="mb-4 d-flex flex-wrap justify-content-between gap-2">
+            <div class="btn-group" role="group">
+                <a href="hr_dashboard.php" class="btn btn-filter <?= $filter == '' ? 'active' : '' ?>">All</a>
+                <a href="hr_dashboard.php?filter=COS" class="btn btn-filter <?= $filter == 'COS' ? 'active' : '' ?>">COS Only</a>
+                <a href="hr_dashboard.php?filter=Permanent" class="btn btn-filter <?= $filter == 'Permanent' ? 'active' : '' ?>">Permanent Only</a>
+            </div>
+            <div class="d-flex gap-2">
+                <a href="export.php" class="btn btn-download">Download CSV</a>
+                <a href="hr_logout.php" class="btn btn-custom">Logout</a>
+            </div>
         </div>
 
         <div class="table-responsive">
@@ -86,28 +114,32 @@ $entries = $stmt->fetchAll(PDO::FETCH_ASSOC);
                     </tr>
                 </thead>
                 <tbody>
-                    <?php foreach ($entries as $e): ?>
-                        <tr>
-                            <td><?= htmlspecialchars($e['staff_name']) ?></td>
-                            <td><?= htmlspecialchars($e['staff_email']) ?></td>
-                            <td><?= htmlspecialchars($e['staff_type']) ?></td>
-                            <td><?= htmlspecialchars($e['title']) ?></td>
-                            <td><?= htmlspecialchars($e['role']) ?></td>
-                            <td><?= htmlspecialchars($e['start_date']) ?> to <?= htmlspecialchars($e['end_date']) ?></td>
-                            <td><?= htmlspecialchars($e['hours']) ?></td>
-                            <td><?= htmlspecialchars($e['type']) ?></td>
-                            <td><?= htmlspecialchars($e['institution']) ?></td>
-                            <td><?= htmlspecialchars($e['unique_code']) ?></td>
-                            <td><?= htmlspecialchars($e['status']) ?></td>
-                            <td>
-                                <?php if ($e['file_path']): ?>
-                                    <a href="<?= htmlspecialchars($e['file_path']) ?>" target="_blank" class="btn btn-custom btn-sm">View</a>
-                                <?php else: ?>
-                                    No file
-                                <?php endif; ?>
-                            </td>
-                        </tr>
-                    <?php endforeach; ?>
+                    <?php if ($entries): ?>
+                        <?php foreach ($entries as $e): ?>
+                            <tr>
+                                <td><?= htmlspecialchars($e['staff_name']) ?></td>
+                                <td><?= htmlspecialchars($e['staff_email']) ?></td>
+                                <td><?= htmlspecialchars($e['staff_type']) ?></td>
+                                <td><?= htmlspecialchars($e['title']) ?></td>
+                                <td><?= htmlspecialchars($e['role']) ?></td>
+                                <td><?= htmlspecialchars($e['start_date']) ?> to <?= htmlspecialchars($e['end_date']) ?></td>
+                                <td><?= htmlspecialchars($e['hours']) ?></td>
+                                <td><?= htmlspecialchars($e['type']) ?></td>
+                                <td><?= htmlspecialchars($e['institution']) ?></td>
+                                <td><?= htmlspecialchars($e['unique_code']) ?></td>
+                                <td><?= htmlspecialchars($e['status']) ?></td>
+                                <td>
+                                    <?php if ($e['file_path']): ?>
+                                        <a href="<?= htmlspecialchars($e['file_path']) ?>" target="_blank" class="btn btn-custom btn-sm">View</a>
+                                    <?php else: ?>
+                                        No file
+                                    <?php endif; ?>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    <?php else: ?>
+                        <tr><td colspan="12" class="text-center">No records found for this filter.</td></tr>
+                    <?php endif; ?>
                 </tbody>
             </table>
         </div>

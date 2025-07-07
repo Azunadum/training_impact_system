@@ -68,6 +68,7 @@ if (isset($_POST['feedback_submit'])) {
 </head>
 <body class="bg-light">
 <div class="container my-5">
+     <a href="index.php" class="btn btn-outline-secondary mb-3">⬅️ Back to Home</a>
     <div class="card mx-auto" style="max-width: 600px;">
         <div class="header">
             <h3>Submit Impact Assessment</h3>

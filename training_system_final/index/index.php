@@ -7,6 +7,8 @@
         body {
             background-color: #f8f9fa;
             font-family: Arial, sans-serif;
+            position: relative;
+            min-height: 100vh;
         }
         .landing-card {
             background: #ffffff;
@@ -29,9 +31,26 @@
             border-radius: 8px 8px 0 0;
             text-align: center;
         }
+        .hr-login-link {
+            position: absolute;
+            top: 20px;
+            right: 40px;
+            font-size: 0.9rem;
+        }
+        .hr-login-link a {
+            color: #003366;
+            text-decoration: none;
+        }
+        .hr-login-link a:hover {
+            text-decoration: underline;
+        }
     </style>
 </head>
 <body>
+<div class="hr-login-link">
+    <a href="hr_login.php">HR Login</a>
+</div>
+
 <div class="container py-5">
     <div class="landing-card mx-auto" style="max-width: 600px;">
         <div class="header">
