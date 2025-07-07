@@ -42,9 +42,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
-    // Build success message WITH email and code in the link
-    $message = "✅ Submitted successfully!<br>Your <strong>Training Entry Code</strong> is: <strong>$unique_code</strong>.<br>Please save it for your 6-Month Impact Assessment.<br>
-    <a href='view_submission.php?email=" . urlencode($email) . "&code=" . urlencode($unique_code) . "' class='btn btn-primary mt-3'>View My Submission</a>";
+    $message = "✅ Submitted successfully!<br>Your <strong>Training Entry Code</strong> is: <strong>$unique_code</strong>.<br>
+    Please save it for your 6-Month Impact Assessment.<br>
+    <a href='view_submission.php?email=" . urlencode($email) . "&code=" . urlencode($unique_code) . "' class='btn btn-custom mt-3'>View My Submission</a>";
 }
 ?>
 
@@ -60,12 +60,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         .header { background-color: #003366; color: #fff; padding: 20px; border-radius: 8px 8px 0 0; text-align: center; margin-bottom: 30px; }
         .btn-custom { background: #003366; color: #fff; border: none; }
         .btn-custom:hover { background: #0055aa; }
+        .modal-header { background-color: #003366; color: #fff; }
     </style>
 </head>
 <body class="bg-light">
 
 <div class="container my-3">
-    <a href="../index.php" class="btn btn-outline-secondary">⬅️ Back to Home</a>
+    <a href="index.php" class="btn btn-outline-secondary">⬅️ Back to Home</a>
 </div>
 
 <div class="container my-3">
@@ -74,7 +75,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <h3>Staff Training Details Form</h3>
         </div>
         <form method="POST" enctype="multipart/form-data">
-            <!-- form fields -->
             <div class="mb-3">
                 <label class="form-label">Name</label>
                 <input type="text" name="name" class="form-control" required>
@@ -91,11 +91,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 </select>
             </div>
             <div class="mb-3">
-                <label class="form-label">Training Title/ L&D</label>
+                <label class="form-label">Training Title / L&D</label>
                 <input type="text" name="title" class="form-control" required>
             </div>
             <div class="mb-3">
-                <label class="form-label">Role (Participant/Facilitator/Resource Speaker, etc.)</label>
+                <label class="form-label">Role</label>
                 <input type="text" name="role" class="form-control" required>
             </div>
             <div class="mb-3">
@@ -111,7 +111,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <input type="number" name="hours" class="form-control" required>
             </div>
             <div class="mb-3">
-                <label class="form-label">Type of Learning and Development (Managerial/Supervisory/Technical/Foundation)</label>
+                <label class="form-label">Type</label>
                 <input type="text" name="type" class="form-control">
             </div>
             <div class="mb-3">
@@ -127,17 +127,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </div>
 </div>
 
-<!-- Modal for success -->
 <?php if ($message): ?>
 <div class="modal fade show" id="successModal" tabindex="-1" aria-modal="true" style="display:block;">
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content">
-      <div class="modal-header bg-success text-white">
+      <div class="modal-header">
         <h5 class="modal-title">Success</h5>
       </div>
       <div class="modal-body"><?= $message ?></div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" onclick="window.location.href='../index.php'">Back to Home</button>
+        <button type="button" class="btn btn-custom" onclick="window.location.href='index.php'">Back to Home</button>
       </div>
     </div>
   </div>
