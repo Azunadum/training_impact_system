@@ -91,11 +91,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 </select>
             </div>
             <div class="mb-3">
-                <label class="form-label">Training Title / L&D</label>
+                <label class="form-label">Title of Training/L&D</label>
                 <input type="text" name="title" class="form-control" required>
             </div>
             <div class="mb-3">
-                <label class="form-label">Role</label>
+                <label class="form-label">Role (Participant/Facilitator/Resource Speaker)</label>
                 <input type="text" name="role" class="form-control" required>
             </div>
             <div class="mb-3">
@@ -111,7 +111,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <input type="number" name="hours" class="form-control" required>
             </div>
             <div class="mb-3">
-                <label class="form-label">Type</label>
+                <label class="form-label">Type of Learning and Development (Managerial/Supervisory/Technical/Foundation)</label>
                 <input type="text" name="type" class="form-control">
             </div>
             <div class="mb-3">

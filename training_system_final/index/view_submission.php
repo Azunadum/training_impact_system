@@ -53,7 +53,7 @@ if ($email && $code) {
                 <p><strong>Name:</strong> <?= htmlspecialchars($entry['staff_name']) ?></p>
                 <p><strong>Email:</strong> <?= htmlspecialchars($entry['staff_email']) ?></p>
                 <p><strong>Staff Type:</strong> <?= htmlspecialchars($entry['staff_type']) ?></p>
-                <p><strong>Training Title/ L&D:</strong> <?= htmlspecialchars($entry['title']) ?></p>
+                <p><strong>Title of Training/L&D:</strong> <?= htmlspecialchars($entry['title']) ?></p>
                 <p><strong>Role:</strong> <?= htmlspecialchars($entry['role']) ?></p>
                 <p><strong>Dates:</strong> <?= htmlspecialchars($entry['start_date']) ?> to <?= htmlspecialchars($entry['end_date']) ?></p>
                 <p><strong>Hours:</strong> <?= htmlspecialchars($entry['hours']) ?></p>
