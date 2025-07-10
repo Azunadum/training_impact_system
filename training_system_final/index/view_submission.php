@@ -1,12 +1,18 @@
 <?php
 require_once '../config/config.php';
 
+// Start session if you want to add future CSRF to POST form here too
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
 $details = null;
 $error = '';
 
 $email = isset($_GET['email']) ? trim($_GET['email']) : '';
 $code  = isset($_GET['code']) ? trim($_GET['code']) : '';
 
+// If POST fallback
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $email = trim($_POST['email']);
     $code  = trim($_POST['code']);
@@ -68,7 +74,7 @@ if ($email && $code) {
 
         <?php elseif (!$email || !$code): ?>
             <?php if ($error): ?>
-                <div class="alert alert-danger"><?= $error ?></div>
+                <div class="alert alert-danger"><?= htmlspecialchars($error) ?></div>
             <?php endif; ?>
             <form method="POST">
                 <div class="mb-3">
