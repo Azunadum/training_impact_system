@@ -1,12 +1,10 @@
 <?php
 require_once '../config/config.php';
 
-// Start session for CSRF
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-// Generate CSRF token if missing
 if (empty($_SESSION['csrf_token'])) {
     $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
 }
@@ -16,7 +14,6 @@ $unique_code = '';
 $email = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // CSRF check
     if (!isset($_POST['csrf_token']) || $_POST['csrf_token'] !== $_SESSION['csrf_token']) {
         die('Invalid CSRF token.');
     }
@@ -32,7 +29,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $type = trim($_POST['type']);
     $institution = trim($_POST['institution']);
 
-    // Validations
     if ($start_date > $end_date) {
         die("Start date cannot be after end date.");
     }
@@ -43,7 +39,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         die("At least one file must be uploaded.");
     }
 
-    // ✅ Validate files first
     $allowed_exts = ['pdf', 'doc', 'docx'];
     foreach ($_FILES['docs']['name'] as $index => $file_name) {
         if ($_FILES['docs']['error'][$index] !== UPLOAD_ERR_OK) {
@@ -64,7 +59,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
-    // ✅ Only insert if files valid
     $stmt = $pdo->prepare("INSERT INTO training_entries 
         (staff_name, staff_email, staff_type, title, role, start_date, end_date, hours, type, institution) 
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
@@ -76,7 +70,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $pdo->prepare("UPDATE training_entries SET unique_code = ? WHERE id = ?")
         ->execute([$unique_code, $entry_id]);
 
-    // ✅ Upload files now
     foreach ($_FILES['docs']['name'] as $index => $file_name) {
         $tmpPath = $_FILES['docs']['tmp_name'][$index];
         $safeName = preg_replace("/[^a-zA-Z0-9_\.-]/", "_", basename($file_name));
@@ -191,6 +184,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <label class="form-label">Upload Documents</label>
                 <input type="file" id="docs" name="docs[]" class="form-control" accept=".pdf,.doc,.docx" multiple required>
                 <div class="invalid-feedback">Please upload at least one document.</div>
+                <ul id="fileList" class="mt-2"></ul>
             </div>
 
             <button type="submit" class="btn btn-custom w-100">Submit</button>
@@ -217,38 +211,70 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 <script>
 (() => {
-  'use strict'
-  const form = document.getElementById('trainingForm')
-  const fileInput = document.getElementById('docs')
+  'use strict';
+  const form = document.getElementById('trainingForm');
+  const fileInput = document.getElementById('docs');
+  const fileList = document.getElementById('fileList');
+
+  fileInput.addEventListener('change', () => {
+    fileList.innerHTML = '';
+
+    if (fileInput.files.length > 0) {
+      fileInput.classList.remove('is-invalid'); // ✅ Clear invalid if user selected files
+    }
+
+    Array.from(fileInput.files).forEach((file, idx) => {
+      const li = document.createElement('li');
+      li.textContent = file.name + ' ';
+      const removeBtn = document.createElement('button');
+      removeBtn.textContent = 'Remove';
+      removeBtn.type = 'button';
+      removeBtn.className = 'btn btn-sm btn-danger ms-2';
+      removeBtn.onclick = () => {
+        const dt = new DataTransfer();
+        Array.from(fileInput.files).forEach((f, i) => {
+          if (i !== idx) dt.items.add(f);
+        });
+        fileInput.files = dt.files;
+        fileInput.dispatchEvent(new Event('change')); // trigger this same handler again
+      };
+      li.appendChild(removeBtn);
+      fileList.appendChild(li);
+    });
+  });
 
   form.addEventListener('submit', event => {
+    // ✅ Only mark as invalid on submit
     if (fileInput.files.length === 0) {
-      fileInput.classList.add('is-invalid')
-      event.preventDefault()
-      event.stopPropagation()
+      fileInput.classList.add('is-invalid');
+      event.preventDefault();
+      event.stopPropagation();
     } else {
-      fileInput.classList.remove('is-invalid')
+      fileInput.classList.remove('is-invalid');
     }
 
     if (!form.checkValidity()) {
-      event.preventDefault()
-      event.stopPropagation()
+      event.preventDefault();
+      event.stopPropagation();
     }
-    form.classList.add('was-validated')
-  })
+
+    form.classList.add('was-validated');
+  });
 
   form.querySelectorAll('input, select').forEach(field => {
-    field.addEventListener('blur', () => {
-      if (!form.classList.contains('was-validated')) {
-        if (!field.checkValidity()) {
-          field.classList.add('is-invalid')
-        } else {
-          field.classList.remove('is-invalid')
+    if (field !== fileInput) { // ✅ Exclude file input from blur check
+      field.addEventListener('blur', () => {
+        if (!form.classList.contains('was-validated')) {
+          if (!field.checkValidity()) {
+            field.classList.add('is-invalid');
+          } else {
+            field.classList.remove('is-invalid');
+          }
         }
-      }
-    })
-  })
-})()
+      });
+    }
+  });
+})();
 </script>
 
 </body>

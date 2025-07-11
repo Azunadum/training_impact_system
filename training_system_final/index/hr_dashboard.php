@@ -2,183 +2,160 @@
 require_once '../config/config.php';
 
 if (!isset($_SESSION['hr_id'])) die("Access denied.");
-
-// ✅ Filters
-$filter = '';
-$where = '';
-$params = [];
-
-if (isset($_GET['filter']) && in_array($_GET['filter'], ['COS', 'Permanent', 'Pending', 'Completed'])) {
-    $filter = $_GET['filter'];
-    if ($filter === 'Pending' || $filter === 'Completed') {
-        $where = "WHERE te.status = ?";
-    } else {
-        $where = "WHERE te.staff_type = ?";
-    }
-    $params[] = $filter;
-}
-
-// ✅ Sorting
-$allowedSort = ['staff_name', 'title', 'start_date', 'end_date', 'hours'];
-$sort = 'te.id';
-$dir = 'DESC';
-
-if (isset($_GET['sort']) && in_array($_GET['sort'], $allowedSort)) {
-    $sort = $_GET['sort'];
-}
-if (isset($_GET['dir']) && in_array(strtoupper($_GET['dir']), ['ASC', 'DESC'])) {
-    $dir = strtoupper($_GET['dir']);
-}
-
-// ✅ Pagination
-$limit = 10; // rows per page
-$page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
-$offset = ($page - 1) * $limit;
-
-// ✅ Total rows for pagination count
-$countStmt = $pdo->prepare("SELECT COUNT(*) FROM training_entries te $where");
-$countStmt->execute($params);
-$totalRows = $countStmt->fetchColumn();
-$totalPages = ceil($totalRows / $limit);
-
-// ✅ Main query with LIMIT & OFFSET
-$stmt = $pdo->prepare("
-    SELECT te.*, sd.file_name, sd.file_path
-    FROM training_entries te
-    LEFT JOIN supporting_docs sd ON te.id = sd.training_entry_id
-    $where
-    ORDER BY $sort $dir
-    LIMIT $limit OFFSET $offset
-");
-$stmt->execute($params);
-$entries = $stmt->fetchAll(PDO::FETCH_ASSOC);
 ?>
 
 <!DOCTYPE html>
 <html>
 <head>
-    <title>HR Dashboard</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <style>
-        body { background-color: #f8f9fa; font-family: Arial, sans-serif; }
-        .dashboard-card { background: #fff; border-radius: 8px; box-shadow: 0 0 20px rgba(0,0,0,0.1); padding: 30px; }
-        .header { background-color: #003366; color: #fff; padding: 25px; border-radius: 8px 8px 0 0; text-align: center; margin-bottom: 25px; }
-        .btn-custom, .btn-filter, .btn-download, .btn-logout { background: #003366; color: #fff; border: none; }
-        .btn-custom:hover, .btn-filter:hover, .btn-download:hover, .btn-logout:hover { background: #0055aa; }
-        .btn-filter.active { background: #0055aa; }
-        .actions-bar { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; margin-bottom: 25px; gap: 10px; }
-        .filter-group { display: flex; flex-wrap: wrap; gap: 8px; }
-        .action-buttons { display: flex; flex-wrap: wrap; gap: 8px; }
-        th a { color: #fff; text-decoration: underline; cursor: pointer; }
-        th a:hover { opacity: 0.85; }
-        .sort-icon { font-size: 0.75em; margin-left: 4px; }
-    </style>
+  <title>HR Dashboard</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+  <style>
+    body { background-color: #f8f9fa; font-family: Arial, sans-serif; }
+    .dashboard-card { background: #fff; border-radius: 8px; box-shadow: 0 0 20px rgba(0,0,0,0.1); padding: 30px; }
+    .header { background-color: #003366; color: #fff; padding: 25px; border-radius: 8px 8px 0 0; text-align: center; margin-bottom: 25px; }
+    .btn-custom, .btn-filter, .btn-download, .btn-logout { background: #003366; color: #fff; border: none; }
+    .btn-custom:hover, .btn-filter:hover, .btn-download:hover, .btn-logout:hover { background: #0055aa; }
+    .btn-filter.active { background: #0055aa; }
+    .actions-bar { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; margin-bottom: 25px; gap: 10px; }
+    .filter-group { display: flex; flex-wrap: wrap; gap: 8px; }
+    .action-buttons { display: flex; flex-wrap: wrap; gap: 8px; }
+    .search-bar { margin-bottom: 20px; }
+    th a { color: #fff; text-decoration: underline; cursor: pointer; }
+    th a:hover { opacity: 0.85; }
+    .sort-icon { font-size: 0.75em; margin-left: 4px; }
+    thead th {
+    position: sticky;
+    top: 0;
+    background-color: #003366;
+    color: #fff; /* ensure text is readable on dark bg */
+    z-index: 1;
+    }
+    .table-responsive { max-height: 500px; overflow-y: auto; }
+    .table th, .table td { vertical-align: middle; }
+    .pagination { justify-content: center; margin-top: 20px; }
+    .pagination a { color: #003366; }
+    .pagination a:hover { text-decoration: none; }
+    .pagination .active a { background-color: #0055aa; color: #fff; border-color: #0055aa; }
+    .pagination .disabled a { color: #ccc; }
+    .pagination .disabled a:hover { background-color: #f8f9fa; color: #ccc; }
+    .no-results { text-align: center; color: #888; font-style: italic; margin-top: 20px; }
+    .table th { cursor: pointer; }
+    .table th a { color: inherit; text-decoration: none; }
+    .table th a:hover { text-decoration: underline; }
+    .table th a .sort-icon { font-size: 0.75em; margin-left: 4px; }
+    .table th a.active { color: #fff; }
+    .table th a.active .sort-icon { color: #fff; }
+    .table th a.inactive { color: #ccc; }
+    .table th a.inactive .sort-icon { color: #ccc; }
+    .table th a.inactive:hover { color: #fff; }
+    .table th a.inactive:hover .sort-icon { color: #fff; }              
+  </style>
 </head>
 <body class="bg-light">
 <div class="container my-5">
-    <div class="dashboard-card">
-        <div class="header">
-            <h2>Training Impact Assessment Dashboard</h2>
-        </div>
-
-        <!-- Filters & actions -->
-        <div class="actions-bar">
-            <div class="filter-group">
-                <a href="hr_dashboard.php" class="btn btn-filter <?= $filter == '' ? 'active' : '' ?>">All</a>
-                <a href="hr_dashboard.php?filter=COS" class="btn btn-filter <?= $filter == 'COS' ? 'active' : '' ?>">COS Only</a>
-                <a href="hr_dashboard.php?filter=Permanent" class="btn btn-filter <?= $filter == 'Permanent' ? 'active' : '' ?>">Permanent Only</a>
-                <a href="hr_dashboard.php?filter=Pending" class="btn btn-filter <?= $filter == 'Pending' ? 'active' : '' ?>">Pending Only</a>
-                <a href="hr_dashboard.php?filter=Completed" class="btn btn-filter <?= $filter == 'Completed' ? 'active' : '' ?>">Completed Only</a>
-            </div>
-            <div class="action-buttons">
-                <a href="export.php" class="btn btn-download">Download CSV</a>
-                <a href="hr_logout.php" class="btn btn-logout">Logout</a>
-            </div>
-        </div>
-
-        <!-- Data Table -->
-        <div class="table-responsive">
-            <table class="table table-bordered table-striped align-middle">
-                <thead class="table-dark">
-                    <tr>
-                        <?php
-                        function sortLink($col, $label, $filter, $sort, $dir) {
-                            $nextDir = ($sort == $col && $dir == 'ASC') ? 'DESC' : 'ASC';
-                            $icon = '';
-                            if ($sort == $col) {
-                                $icon = $dir == 'ASC' ? '▲' : '▼';
-                            }
-                            $url = "hr_dashboard.php?sort=$col&dir=$nextDir";
-                            if ($filter) $url .= "&filter=$filter";
-                            return "<a href='$url'>$label <span class='sort-icon'>$icon</span></a>";
-                        }
-                        ?>
-                        <th><?= sortLink('staff_name', 'Name', $filter, $sort, $dir) ?></th>
-                        <th>Email</th>
-                        <th>Staff</th>
-                        <th><?= sortLink('title', 'Training Title', $filter, $sort, $dir) ?></th>
-                        <th>Role</th>
-                        <th><?= sortLink('start_date', 'Start Date', $filter, $sort, $dir) ?></th>
-                        <th><?= sortLink('end_date', 'End Date', $filter, $sort, $dir) ?></th>
-                        <th><?= sortLink('hours', 'Hours', $filter, $sort, $dir) ?></th>
-                        <th>Type</th>
-                        <th>Conducted/Sponsored</th>
-                        <th>Code</th>
-                        <th>Status</th>
-                        <th>Document</th>
-                    </tr>
-                </thead>
-                <tbody>
-                <?php if ($entries): ?>
-                    <?php foreach ($entries as $e): ?>
-                        <tr>
-                            <td><?= htmlspecialchars($e['staff_name']) ?></td>
-                            <td><?= htmlspecialchars($e['staff_email']) ?></td>
-                            <td><?= htmlspecialchars($e['staff_type']) ?></td>
-                            <td><?= htmlspecialchars($e['title']) ?></td>
-                            <td><?= htmlspecialchars($e['role']) ?></td>
-                            <td><?= htmlspecialchars($e['start_date']) ?></td>
-                            <td><?= htmlspecialchars($e['end_date']) ?></td>
-                            <td><?= htmlspecialchars($e['hours']) ?></td>
-                            <td><?= htmlspecialchars($e['type']) ?></td>
-                            <td><?= htmlspecialchars($e['institution']) ?></td>
-                            <td><?= htmlspecialchars($e['unique_code']) ?></td>
-                            <td><?= htmlspecialchars($e['status']) ?></td>
-                            <td>
-                                <?php if ($e['file_path']): ?>
-                                    <a href="<?= htmlspecialchars($e['file_path']) ?>" target="_blank" class="btn btn-custom btn-sm">View</a>
-                                <?php else: ?>
-                                    No file
-                                <?php endif; ?>
-                            </td>
-                        </tr>
-                    <?php endforeach; ?>
-                <?php else: ?>
-                    <tr><td colspan="13" class="text-center">No records found.</td></tr>
-                <?php endif; ?>
-                </tbody>
-            </table>
-        </div>
-
-        <!-- ✅ Pagination -->
-        <?php if ($totalPages > 1): ?>
-        <nav>
-            <ul class="pagination justify-content-center">
-                <?php for ($i = 1; $i <= $totalPages; $i++): ?>
-                    <?php
-                    $pageUrl = "hr_dashboard.php?page=$i";
-                    if ($filter) $pageUrl .= "&filter=$filter";
-                    if ($sort) $pageUrl .= "&sort=$sort&dir=$dir";
-                    ?>
-                    <li class="page-item <?= $page == $i ? 'active' : '' ?>">
-                        <a class="page-link" href="<?= $pageUrl ?>"><?= $i ?></a>
-                    </li>
-                <?php endfor; ?>
-            </ul>
-        </nav>
-        <?php endif; ?>
-
+  <div class="dashboard-card">
+    <div class="header">
+      <h2>Training Impact Assessment Dashboard</h2>
     </div>
+
+    <!-- Filters & actions -->
+    <div class="actions-bar">
+      <div class="filter-group">
+        <button class="btn btn-filter active" data-filter="">All</button>
+        <button class="btn btn-filter" data-filter="COS">COS Only</button>
+        <button class="btn btn-filter" data-filter="Permanent">Permanent Only</button>
+        <button class="btn btn-filter" data-filter="Pending">Pending Only</button>
+        <button class="btn btn-filter" data-filter="Completed">Completed Only</button>
+      </div>
+      <div class="action-buttons">
+        <a href="export.php" class="btn btn-download">Download CSV</a>
+        <a href="hr_logout.php" class="btn btn-logout">Logout</a>
+      </div>
+    </div>
+
+    <!-- Search bar -->
+    <div class="search-bar input-group">
+        <input type="text" id="searchInput" class="form-control" placeholder="Search name, title or code...">
+        <button id="searchBtn" class="btn btn-custom">Search</button>
+        <button id="clearSearchBtn" class="btn btn-outline-secondary">Clear</button>
+    </div>
+
+    <!-- AJAX result container -->
+    <div id="dataContainer">
+      <!-- Table rows + pagination will be loaded here -->
+    </div>
+
+  </div>
 </div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+  let filter = '';
+  let search = '';
+  let sort = '';
+  let dir = '';
+  let page = 1;
+
+  function loadData() {
+    const params = new URLSearchParams();
+    if (filter) params.append('filter', filter);
+    if (search) params.append('search', search);
+    if (sort) { params.append('sort', sort); params.append('dir', dir); }
+    params.append('page', page);
+
+    fetch('hr_dashboard_data.php?' + params.toString())
+      .then(res => res.text())
+      .then(html => {
+        document.getElementById('dataContainer').innerHTML = html;
+        document.querySelectorAll('.page-link').forEach(link => {
+          link.addEventListener('click', e => {
+            e.preventDefault();
+            page = link.dataset.page;
+            loadData();
+          });
+        });
+        document.querySelectorAll('th a').forEach(a => {
+          a.addEventListener('click', e => {
+            e.preventDefault();
+            sort = a.dataset.sort;
+            dir = a.dataset.dir;
+            loadData();
+          });
+        });
+      });
+  }
+
+  document.querySelectorAll('.btn-filter').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.btn-filter').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      filter = btn.dataset.filter;
+      page = 1;
+      loadData();
+    });
+  });
+
+  document.getElementById('searchBtn').addEventListener('click', () => {
+    search = document.getElementById('searchInput').value.trim();
+    page = 1;
+    loadData();
+  });
+
+  document.getElementById('clearSearchBtn').addEventListener('click', () => {
+  document.getElementById('searchInput').value = '';
+  search = '';
+  page = 1;
+  loadData();
+  });
+
+  document.getElementById('searchInput').addEventListener('keyup', e => {
+  if (e.key === 'Enter') {
+    document.getElementById('searchBtn').click();
+  }
+});
+
+  loadData();
+</script>
 </body>
 </html>

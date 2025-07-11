@@ -1,32 +1,34 @@
 <?php
 require_once '../config/config.php';
 
-// Start session if you want to add future CSRF to POST form here too
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-$details = null;
+$entry = null;
+$files = [];
 $error = '';
 
 $email = isset($_GET['email']) ? trim($_GET['email']) : '';
 $code  = isset($_GET['code']) ? trim($_GET['code']) : '';
 
-// If POST fallback
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $email = trim($_POST['email']);
     $code  = trim($_POST['code']);
 }
 
 if ($email && $code) {
-    $stmt = $pdo->prepare("SELECT te.*, sd.file_name, sd.file_path
-        FROM training_entries te
-        LEFT JOIN supporting_docs sd ON te.id = sd.training_entry_id
-        WHERE te.staff_email = ? AND te.unique_code = ?");
+    // ✅ FIX: Get only one training entry
+    $stmt = $pdo->prepare("SELECT * FROM training_entries WHERE staff_email = ? AND unique_code = ?");
     $stmt->execute([$email, $code]);
-    $details = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    $entry = $stmt->fetch(PDO::FETCH_ASSOC);
 
-    if (!$details) {
+    if ($entry) {
+        // ✅ Then get all supporting docs for this entry
+        $stmt = $pdo->prepare("SELECT * FROM supporting_docs WHERE training_entry_id = ?");
+        $stmt->execute([$entry['id']]);
+        $files = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } else {
         $error = "No entry found with this email and code.";
     }
 }
@@ -54,23 +56,25 @@ if ($email && $code) {
             <h3>Training Entry Details</h3>
         </div>
 
-        <?php if ($details): ?>
-            <?php foreach ($details as $entry): ?>
-                <p><strong>Name:</strong> <?= htmlspecialchars($entry['staff_name']) ?></p>
-                <p><strong>Email:</strong> <?= htmlspecialchars($entry['staff_email']) ?></p>
-                <p><strong>Staff Type:</strong> <?= htmlspecialchars($entry['staff_type']) ?></p>
-                <p><strong>Title of Training/L&D:</strong> <?= htmlspecialchars($entry['title']) ?></p>
-                <p><strong>Role:</strong> <?= htmlspecialchars($entry['role']) ?></p>
-                <p><strong>Dates:</strong> <?= htmlspecialchars($entry['start_date']) ?> to <?= htmlspecialchars($entry['end_date']) ?></p>
-                <p><strong>Hours:</strong> <?= htmlspecialchars($entry['hours']) ?></p>
-                <p><strong>Type of Learning and Development:</strong> <?= htmlspecialchars($entry['type']) ?></p>
-                <p><strong>Conducted/Sponsored by:</strong> <?= htmlspecialchars($entry['institution']) ?></p>
-                <p><strong>Training Entry Code:</strong> <?= htmlspecialchars($entry['unique_code']) ?></p>
-                <?php if ($entry['file_path']): ?>
-                    <p><a href="<?= htmlspecialchars($entry['file_path']) ?>" target="_blank" class="btn btn-custom">View Supporting Document</a></p>
-                <?php endif; ?>
-                <hr>
-            <?php endforeach; ?>
+        <?php if ($entry): ?>
+            <p><strong>Name:</strong> <?= htmlspecialchars($entry['staff_name']) ?></p>
+            <p><strong>Email:</strong> <?= htmlspecialchars($entry['staff_email']) ?></p>
+            <p><strong>Staff Type:</strong> <?= htmlspecialchars($entry['staff_type']) ?></p>
+            <p><strong>Title of Training/L&D:</strong> <?= htmlspecialchars($entry['title']) ?></p>
+            <p><strong>Role:</strong> <?= htmlspecialchars($entry['role']) ?></p>
+            <p><strong>Dates:</strong> <?= htmlspecialchars($entry['start_date']) ?> to <?= htmlspecialchars($entry['end_date']) ?></p>
+            <p><strong>Hours:</strong> <?= htmlspecialchars($entry['hours']) ?></p>
+            <p><strong>Type of Learning and Development:</strong> <?= htmlspecialchars($entry['type']) ?></p>
+            <p><strong>Conducted/Sponsored by:</strong> <?= htmlspecialchars($entry['institution']) ?></p>
+            <p><strong>Training Entry Code:</strong> <?= htmlspecialchars($entry['unique_code']) ?></p>
+
+            <?php if ($files): ?>
+                <?php foreach ($files as $file): ?>
+                    <p><a href="<?= htmlspecialchars($file['file_path']) ?>" target="_blank" class="btn btn-custom">View Supporting Document</a></p>
+                <?php endforeach; ?>
+            <?php endif; ?>
+
+            <a href="edit_submission.php?email=<?= urlencode($email) ?>&code=<?= urlencode($code) ?>" class="btn btn-custom mt-3">Edit My Submission</a>
 
         <?php elseif (!$email || !$code): ?>
             <?php if ($error): ?>

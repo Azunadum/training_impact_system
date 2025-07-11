@@ -118,7 +118,7 @@
 
     <!-- Clear CTAs -->
     <div class="d-grid gap-3">
-      <a href="training_form.php" class="btn btn-custom btn-lg">Submit Training Details</a>
+      <a href="training_form.php" class="btn btn-custom btn-lg">Training Input Form</a>
       <a href="impact.php" class="btn btn-custom btn-lg">Submit Impact Assessment</a>
     </div>
   </div>
