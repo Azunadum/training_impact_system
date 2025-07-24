@@ -124,7 +124,23 @@ if (!isset($_SESSION['hr_id'])) die("Access denied.");
           });
         });
       });
+  } 
+
+  function showPreview(url, type) {
+  const preview = document.getElementById('previewContent');
+  preview.innerHTML = '';
+
+  if (type === 'pdf') {
+    preview.innerHTML = `<iframe src="${url}" width="100%" height="600px" style="border: none;"></iframe>`;
+  } else if (type === 'image') {
+    preview.innerHTML = `<img src="${url}" class="img-fluid" alt="Preview">`;
+  } else {
+    preview.innerHTML = `<p>Preview not supported.</p>`;
   }
+
+  const modal = new bootstrap.Modal(document.getElementById('filePreviewModal'));
+  modal.show();
+  } 
 
   document.querySelectorAll('.btn-filter').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -157,5 +173,21 @@ if (!isset($_SESSION['hr_id'])) die("Access denied.");
 
   loadData();
 </script>
+  
+<!-- File Preview Modal -->
+<div class="modal fade" id="filePreviewModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-xl modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">File Preview</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body text-center">
+        <div id="previewContent" style="max-height: 600px; overflow-y: auto;"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>

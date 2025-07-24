@@ -37,7 +37,9 @@ $totalRows = $countStmt->fetchColumn();
 $totalPages = ceil($totalRows / $limit);
 
 $stmt = $pdo->prepare("
-  SELECT te.*, MIN(sd.file_name) AS file_name, MIN(sd.file_path) AS file_path
+  SELECT te.*, 
+         GROUP_CONCAT(sd.file_path SEPARATOR '||') AS file_paths,
+         GROUP_CONCAT(sd.file_name SEPARATOR '||') AS file_names
   FROM training_entries te
   LEFT JOIN supporting_docs sd ON te.id = sd.training_entry_id
   $where
@@ -95,12 +97,30 @@ if ($entries) {
     }
     echo '</td>';
     echo '<td>';
-    if ($e['file_path']) {
-      echo '<a href="'.htmlspecialchars($e['file_path']).'" target="_blank" class="btn btn-custom btn-sm">';
-      echo '<i class="bi bi-file-earmark-text"></i> View</a>';
-    } else {
-      echo 'No file';
-    }
+        if ($e['file_paths']) {
+              $paths = explode('||', $e['file_paths']);
+              $names = explode('||', $e['file_names']);
+              echo '<div class="d-grid gap-1">';
+              foreach ($paths as $i => $path) {
+                $name = htmlspecialchars($names[$i] ?? basename($path));
+                $fileExt = strtolower(pathinfo($path, PATHINFO_EXTENSION));
+                $fileUrl = htmlspecialchars($path);
+
+                if (in_array($fileExt, ['pdf'])) {
+                  echo '<button class="btn btn-custom btn-sm" onclick="showPreview(\''.$fileUrl.'\', \'pdf\')">';
+                  echo '<i class="bi bi-file-earmark-pdf"></i> ' . $name . '</button>';
+                } elseif (in_array($fileExt, ['jpg','jpeg','png','gif'])) {
+                  echo '<button class="btn btn-custom btn-sm" onclick="showPreview(\''.$fileUrl.'\', \'image\')">';
+                  echo '<i class="bi bi-file-image"></i> ' . $name . '</button>';
+                } else {
+                  echo '<a href="'.$fileUrl.'" target="_blank" class="btn btn-custom btn-sm">';
+                  echo '<i class="bi bi-download"></i> ' . $name . '</a>';
+                }
+              }
+              echo '</div>';
+            } else {
+              echo 'No file';
+            }
     echo '</td>';
     echo '</tr>';
   }
