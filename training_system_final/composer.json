@@ -1,0 +1,11 @@
+{
+    "name": "corei7/training_system_final",
+    "autoload": {
+        "psr-4": {
+            "Corei7\\TrainingSystemFinal\\": "src/"
+        }
+    },
+    "require": {
+        "phpmailer/phpmailer": "^6.10"
+    }
+}
